@@ -43,10 +43,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf(".build: \n\tmkdir -p .build\n\n")
 	fmt.Println("# file dependencies based on ADD and COPY directives")
 	for name, record := range records {
-		fmt.Printf(".build/%s: | .build\n", name)
+		fmt.Printf("build-all: build-%s\n\n", name)
+		fmt.Printf("push-all: push-%s\n\n", name) // leaves?
+		fmt.Printf(".build/%s: | .build\n\n", name)
 		fmt.Printf(".build/%s: %s\n\n", name, strings.Join(record.filedeps(dir, name), " "))
 	}
 }
