@@ -2,6 +2,17 @@
 
 
 [[projects]]
+  digest = "1:3cabbabc9e0e4aa7e12b882bdc213f41cf8bd2b2ce2a7b5e0aceaf8a6a78049b"
+  name = "github.com/docker/distribution"
+  packages = [
+    "digest",
+    "reference",
+  ]
+  pruneopts = "UT"
+  revision = "48294d928ced5dd9b378f7fd7c6f5da3ff3f2c89"
+  version = "v2.6.2"
+
+[[projects]]
   branch = "1.12.x"
   digest = "1:bddf66ffe534f60e6ef69fe0a44816b5766f4c6f9050eb57314f6d1ad230cd42"
   name = "github.com/docker/docker"
@@ -15,6 +26,9 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/docker/docker/builder/dockerfile/parser"]
+  input-imports = [
+    "github.com/docker/distribution/reference",
+    "github.com/docker/docker/builder/dockerfile/parser",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
