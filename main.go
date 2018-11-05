@@ -45,33 +45,44 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("# proxy targets for remote fetches")
+	remotesDone := map[string]bool{}
+	for _, record := range records {
+		if record.isLocalFrom() {
+			continue
+		}
+
+		remote, filename := record.remoteFrom()
+		if _, already := remotesDone[remote]; already {
+			continue
+		}
+		remotesDone[remote] = true
+
+		fmt.Printf(".remote/%[1]s: .pull-once | .remote\n"+
+			"\tdocker pull %[2]s\n"+
+			"\t@docker image inspect %[2]s --format '{{.Id}}' > $(TMPDIR)/%[1]s\n"+
+			"\t@diff $(TMPDIR)/%[1]s $@ \\\n\t  || mv $(TMPDIR)/%[1]s $@\n\n", filename, remote)
+	}
+
 	fmt.Println("# file dependencies based on ADD and COPY directives")
 	for name, record := range records {
-		if record.isLocal() {
+		if record.isLocalFrom() {
 			fmt.Printf(".build/%s: .build/%s\n\n", name, record.localFrom(registryURL))
 		} else {
-			remote := record.remoteFrom()
-
-			filename := strings.Replace(remote, "_", "_u_", -1) // ick, but that's how it goes
-			filename = strings.Replace(filename, "/", "_s_", -1)
-			filename = strings.Replace(filename, ":", "_c_", -1)
-			filename = filename + ".image"
+			_, filename := record.remoteFrom()
 
 			fmt.Printf(".build/%s: .remote/%s\n\n", name, filename)
-			fmt.Printf(".remote/%[1]s: .pull-once | .remote\n"+
-				"\tdocker pull %[2]s\n"+
-				"\t@docker image inspect %[2]s --format '{{.Id}}' > $(TMPDIR)/%[1]s\n"+
-				"\t@diff $(TMPDIR)/%[1]s $@ \\\n\t  || mv $(TMPDIR)/%[1]s $@\n\n", filename, remote)
 		}
 
 		fmt.Printf("build-all: build-%s\n\n", name)
 		fmt.Printf("push-all: push-%s\n\n", name) // leaves?
+
 		fmt.Printf(".build/%s: | .build\n\n", name)
 		fmt.Printf(".build/%s: %s\n\n", name, strings.Join(record.filedeps(dir, name), " "))
 	}
 }
 
-func (r depRecord) isLocal() bool {
+func (r depRecord) isLocalFrom() bool {
 	if t, is := r.from.(reference.Tagged); is && t.Tag() == "local" {
 		return true
 	}
@@ -89,8 +100,15 @@ func (r depRecord) localFrom(url string) string {
 	return ""
 }
 
-func (r depRecord) remoteFrom() string {
-	return r.from.String()
+func (r depRecord) remoteFrom() (string, string) {
+	remote := r.from.String()
+	filename := r.from.String()
+	filename = strings.Replace(filename, "_", "_u_", -1) // ick, but that's how it goes
+	filename = strings.Replace(filename, "/", "_s_", -1)
+	filename = strings.Replace(filename, ":", "_c_", -1)
+	filename = filename + ".image"
+
+	return remote, filename
 }
 
 func (r depRecord) filedeps(base, name string) []string {
