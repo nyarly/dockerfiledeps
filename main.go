@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,8 @@ import (
 	"github.com/docker/docker/builder/dockerfile/parser"
 )
 
+//go:generate inlinefiles --package=main --glob=driver.mk --vfs=VFS . makefile_vfs.go
+
 type depRecord struct {
 	from     reference.Reference
 	addpaths []string
@@ -20,7 +23,22 @@ type depRecord struct {
 
 var records = map[string]depRecord{}
 
+var emitFile = flag.Bool("emit-driver", false, "print out a driver makefile suitable for inclusion")
+
 func main() {
+	flag.Parse()
+
+	if *emitFile {
+		data, err := VFS.Open("driver.mk")
+		if err != nil {
+			log.Fatal(err)
+		}
+		if _, err := io.Copy(os.Stdout, data); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
+
 	if len(os.Args) != 3 {
 		log.Fatalf("Usage: %s <build root directory>", os.Args[0])
 	}
