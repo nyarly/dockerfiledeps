@@ -20,6 +20,12 @@ VERSION_TAG := $(shell git describe --exact-match 2>/dev/null || echo unversione
 CLEAN := no
 DEFAULT_TAG := dirty
 
+PROGRESS := cat
+PV != which pv
+ifeq ($(.SHELLSTATUS), 0)
+PROGRESS := $(PV) -Cptabf -i 2 -A 80
+endif
+
 ifeq ($(shell git diff-index --quiet HEAD ; echo $$?),0)
 CLEAN := yes
 DEFAULT_TAG := latest
@@ -61,8 +67,9 @@ clean:
 		--build-arg BUILD_IMAGE_DOCKERFILE=$(shell git ls-tree --full-name --name-only HEAD $<) \
 		--build-arg BUILD_IMAGE_CLEAN=$(CLEAN) \
 		--build-arg VERSION=$(shell cat .tags/version) \
-		$(EXTRA_DOCKER_BUILD_ARGS-$(*)) . \
-		> ../.logs/build-$* 2>&1
+		$(EXTRA_DOCKER_BUILD_ARGS-$(*)) \
+                . 2>&1 \
+		| $(PROGRESS) > ../.logs/build-$*
 	touch $@
 
 docker-deps.mk: $(shell find . -type f -name Dockerfile) $(shell which dockerfiledeps)
